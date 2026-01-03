@@ -8,3 +8,4 @@ This directory should contain application assets:
 You can create or add your own icons here. For now, the application will work without icons (using empty/placeholder icons).
 
 
+
