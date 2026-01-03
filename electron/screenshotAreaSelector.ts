@@ -1,0 +1,163 @@
+import { BrowserWindow, screen, ipcMain } from 'electron';
+import * as path from 'path';
+
+let selectorWindow: BrowserWindow | null = null;
+let isSelecting = false;
+let currentResolve: ((value: SelectionArea) => void) | null = null;
+let currentReject: ((reason?: any) => void) | null = null;
+
+interface SelectionArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 初始化 IPC 监听器（只需要调用一次）
+ */
+export function initializeScreenshotSelector() {
+  // 处理区域选择完成
+  ipcMain.on('screenshot-area-selected', (_event, area: SelectionArea) => {
+    if (currentResolve) {
+      isSelecting = false;
+      if (selectorWindow) {
+        selectorWindow.close();
+        selectorWindow = null;
+      }
+      const resolve = currentResolve;
+      currentResolve = null;
+      currentReject = null;
+      resolve(area);
+    }
+  });
+
+  // 处理区域选择取消
+  ipcMain.on('screenshot-area-cancelled', () => {
+    if (currentReject) {
+      isSelecting = false;
+      if (selectorWindow) {
+        selectorWindow.close();
+        selectorWindow = null;
+      }
+      const reject = currentReject;
+      currentResolve = null;
+      currentReject = null;
+      reject(new Error('Selection cancelled'));
+    }
+  });
+}
+
+/**
+ * 创建区域选择窗口
+ */
+function createSelectorWindow(): Promise<SelectionArea> {
+  return new Promise((resolve, reject) => {
+    if (isSelecting) {
+      reject(new Error('Selection already in progress'));
+      return;
+    }
+
+    isSelecting = true;
+    currentResolve = resolve;
+    currentReject = reject;
+    
+    // 找到主显示器
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    const { x: screenX, y: screenY } = primaryDisplay.bounds;
+
+    // 创建全屏透明窗口用于选择区域
+    selectorWindow = new BrowserWindow({
+      width: screenWidth,
+      height: screenHeight,
+      x: screenX,
+      y: screenY,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      movable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.js'),
+      },
+    });
+
+    // 加载选择器 HTML
+    selectorWindow.loadFile(path.join(__dirname, 'screenshot-selector.html'));
+
+    selectorWindow.setIgnoreMouseEvents(false);
+    selectorWindow.show();
+    selectorWindow.focus();
+
+    selectorWindow.on('closed', () => {
+      isSelecting = false;
+      selectorWindow = null;
+      if (currentReject) {
+        const reject = currentReject;
+        currentResolve = null;
+        currentReject = null;
+        reject(new Error('Selection window closed'));
+      }
+    });
+  });
+}
+
+/**
+ * 截取指定区域
+ */
+async function captureArea(area: SelectionArea): Promise<string> {
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { x: screenX, y: screenY } = primaryDisplay.bounds;
+
+  // 调整坐标（考虑屏幕偏移）
+  const adjustedX = area.x + screenX;
+  const adjustedY = area.y + screenY;
+
+  try {
+    // 使用 nativeImage 截取屏幕区域
+    const image = screen.captureDisplay(primaryDisplay.id, {
+      x: adjustedX,
+      y: adjustedY,
+      width: area.width,
+      height: area.height,
+    });
+
+    if (!image) {
+      throw new Error('Failed to capture area');
+    }
+
+    // 转换为 base64
+    const base64 = image.toPNG().toString('base64');
+    return base64;
+  } catch (error: any) {
+    console.error('Area capture error:', error);
+    throw new Error(`Failed to capture area: ${error.message}`);
+  }
+}
+
+/**
+ * 选择截图区域并返回截图
+ */
+export async function selectAndCaptureArea(): Promise<string> {
+  try {
+    // 创建选择窗口并等待用户选择
+    const area = await createSelectorWindow();
+    
+    // 截取选中的区域
+    const base64 = await captureArea(area);
+    
+    return base64;
+  } catch (error: any) {
+    if (error.message === 'Selection cancelled' || error.message === 'Selection window closed') {
+      throw error;
+    }
+    console.error('Select and capture error:', error);
+    throw new Error(`Failed to select and capture area: ${error.message}`);
+  }
+}
+

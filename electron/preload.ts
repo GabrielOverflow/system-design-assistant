@@ -21,6 +21,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
+  
+  // 区域选择器专用方法
+  sendScreenshotAreaSelected: (area: { x: number; y: number; width: number; height: number }) => {
+    ipcRenderer.send('screenshot-area-selected', area);
+  },
+  sendScreenshotAreaCancelled: () => {
+    ipcRenderer.send('screenshot-area-cancelled');
+  },
 });
 
 // TypeScript类型定义
@@ -35,6 +43,8 @@ declare global {
       onTriggerScreenshot: (callback: () => void) => void;
       onTriggerTextInput: (callback: () => void) => void;
       removeAllListeners: (channel: string) => void;
+      sendScreenshotAreaSelected: (area: { x: number; y: number; width: number; height: number }) => void;
+      sendScreenshotAreaCancelled: () => void;
     };
   }
 }

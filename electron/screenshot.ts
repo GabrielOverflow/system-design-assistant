@@ -1,4 +1,5 @@
 import { desktopCapturer } from 'electron';
+import { selectAndCaptureArea } from './screenshotAreaSelector';
 
 /**
  * 使用Electron的desktopCapturer API进行截图
@@ -61,13 +62,16 @@ export function setupScreenshot(ipcMain: Electron.IpcMain) {
     }
   });
 
-  // 选择区域截图（当前实现为全屏截图，后续可以添加区域选择UI）
+  // 选择区域截图
   ipcMain.handle('select-screenshot-area', async () => {
     try {
-      // 当前返回全屏截图
-      // 后续可以实现一个区域选择窗口让用户选择截图区域
-      return await captureScreen();
-    } catch (error) {
+      // 使用区域选择器
+      return await selectAndCaptureArea();
+    } catch (error: any) {
+      // 如果用户取消选择，返回一个特殊错误
+      if (error.message === 'Selection cancelled') {
+        throw new Error('Screenshot cancelled by user');
+      }
       console.error('Screenshot area selection error:', error);
       throw error;
     }

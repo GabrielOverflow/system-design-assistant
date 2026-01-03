@@ -2,6 +2,7 @@ import { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage } 
 import * as path from 'path';
 import { setupWindowHide } from './windowHide';
 import { setupScreenshot } from './screenshot';
+import { initializeScreenshotSelector } from './screenshotAreaSelector';
 import Store from 'electron-store';
 
 const store = new Store();
@@ -169,8 +170,19 @@ function registerShortcuts() {
 
   // Ctrl+Shift+S: 截图
   globalShortcut.register('CommandOrControl+Shift+S', () => {
-    if (mainWindow) {
+    // 即使窗口隐藏，快捷键也应该工作
+    if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('trigger-screenshot');
+    } else {
+      // 如果窗口不存在或被销毁，创建一个新窗口
+      createWindow();
+      if (mainWindow) {
+        mainWindow.webContents.once('did-finish-load', () => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('trigger-screenshot');
+          }
+        });
+      }
     }
   });
 
@@ -198,6 +210,7 @@ ipcMain.handle('get-all-store', () => {
 
 // 截图相关
 setupScreenshot(ipcMain);
+initializeScreenshotSelector();
 
 app.whenReady().then(() => {
   console.log('Electron app is ready');
