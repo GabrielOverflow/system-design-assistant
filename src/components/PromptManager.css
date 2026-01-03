@@ -1,0 +1,176 @@
+.prompt-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.prompt-form {
+  background: #3a3a3a;
+  padding: 16px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px;
+  background: #2a2a2a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.submit-button,
+.cancel-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submit-button {
+  background: #4a90e2;
+  color: #fff;
+}
+
+.submit-button:hover {
+  background: #357abd;
+}
+
+.cancel-button {
+  background: #5a5a5a;
+  color: #e0e0e0;
+}
+
+.cancel-button:hover {
+  background: #6a6a6a;
+}
+
+.prompt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prompt-item {
+  background: #3a3a3a;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #4a90e2;
+}
+
+.prompt-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.prompt-item-header strong {
+  color: #fff;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.prompt-category-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #4a90e2;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.prompt-item-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.edit-button,
+.delete-button {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-button {
+  background: #4a90e2;
+  color: #fff;
+}
+
+.edit-button:hover {
+  background: #357abd;
+}
+
+.delete-button {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.delete-button:hover {
+  background: #c0392b;
+}
+
+.prompt-item-content {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.prompt-empty {
+  padding: 40px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+

@@ -1,0 +1,61 @@
+.main-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  gap: 16px;
+}
+
+.main-panel-header {
+  flex-shrink: 0;
+}
+
+.main-panel-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.action-button {
+  flex: 1;
+  padding: 12px 24px;
+  background: #4a90e2;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button:hover:not(:disabled) {
+  background: #357abd;
+  transform: translateY(-1px);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.screenshot-button {
+  background: #4a90e2;
+}
+
+.text-button {
+  background: #50c878;
+}
+
+.text-button:hover:not(:disabled) {
+  background: #3fa865;
+}
+
+.main-panel-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+
