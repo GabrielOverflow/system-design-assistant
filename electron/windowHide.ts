@@ -48,28 +48,46 @@ export function setupWindowHide(window: BrowserWindow) {
     return;
   }
 
-  window.once('ready-to-show', () => {
+  // 在窗口创建后立即应用隐藏功能
+  const applyWindowHide = () => {
     try {
       const hwnd = window.getNativeWindowHandle();
+      if (!hwnd) {
+        console.warn('Window handle not available yet, will retry...');
+        setTimeout(applyWindowHide, 100);
+        return;
+      }
+
       const hwndBuffer = hwnd as Buffer;
       const hwndLong = hwndBuffer.readInt32LE(0);
 
       // 设置窗口显示关联性，使其在屏幕录制时不可见
+      // WDA_EXCLUDEFROMCAPTURE = 0x00000011 (Windows 10 2004+)
       const result = user32.SetWindowDisplayAffinity(hwndLong, WDA_EXCLUDEFROMCAPTURE);
       if (result) {
-        console.log('Window display affinity set successfully');
+        console.log('✓ Window display affinity set successfully - window will be hidden during screen sharing');
       } else {
-        console.error('Failed to set window display affinity');
+        console.error('✗ Failed to set window display affinity');
       }
 
       // 设置窗口样式，隐藏任务栏图标
       const exStyle = user32.GetWindowLongPtrW(hwndLong, GWL_EXSTYLE);
       const newExStyle = exStyle | WS_EX_TOOLWINDOW;
       user32.SetWindowLongPtrW(hwndLong, GWL_EXSTYLE, newExStyle);
-      console.log('Window style updated to hide from taskbar');
-    } catch (error) {
+      console.log('✓ Window style updated to hide from taskbar');
+    } catch (error: any) {
       console.error('Error setting up window hide:', error);
     }
-  });
+  };
+
+  // 尝试立即应用，如果窗口还没准备好，等待 ready-to-show
+  if (window.isVisible()) {
+    applyWindowHide();
+  } else {
+    window.once('ready-to-show', applyWindowHide);
+  }
+  
+  // 也监听 show 事件，确保在窗口显示时应用
+  window.on('show', applyWindowHide);
 }
 

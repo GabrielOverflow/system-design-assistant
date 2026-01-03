@@ -68,8 +68,18 @@ npm run electron:build
 4. **图标文件**：可以在 `assets` 目录中添加应用图标
 5. **窗口隐藏功能（可选依赖）**：
    - 窗口隐藏功能需要 `ffi-napi` 和 `ref-napi` 包（已设为可选依赖）
+   - **在 Windows 上启用**：
+     ```bash
+     npm install ffi-napi ref-napi
+     npm run build:electron
+     npm run electron:dev
+     ```
+   - 启动后查看控制台，如果看到以下消息说明功能已启用：
+     ```
+     ✓ Window display affinity set successfully - window will be hidden during screen sharing
+     ✓ Window style updated to hide from taskbar
+     ```
    - 在 Linux/WSL 环境下开发时，这些包可能无法编译，但不影响其他功能
-   - 在 Windows 上构建时，可以手动安装：`npm install ffi-napi ref-napi`
    - 如果这些包不可用，应用仍可正常运行，只是窗口隐藏功能会被禁用
 
 ## 故障排除
@@ -81,6 +91,13 @@ npm run electron:build
 
 ### 窗口隐藏功能不工作
 - 确保Windows版本 >= 10 2004
+- 确保已安装 `ffi-napi` 和 `ref-napi`：
+  ```bash
+  npm install ffi-napi ref-napi
+  npm run build:electron
+  ```
+- 检查控制台是否有错误信息
+- 如果看到 "Windows API binding not available"，说明依赖包未安装
 - 检查是否以管理员权限运行（某些情况下需要）
 
 ### API调用失败

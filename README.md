@@ -47,10 +47,42 @@ npm run electron:build
 4. 使用快捷键 `Ctrl+Shift+H` 显示/隐藏窗口
 5. 在设置中可以管理预设Prompt
 
+## 窗口隐藏功能（屏幕共享时隐藏）
+
+### 功能说明
+- ✅ **屏幕共享隐藏**：在 Zoom、Teams、OBS 等软件进行屏幕共享时，应用窗口会自动隐藏
+- ✅ **任务栏隐藏**：应用不会在任务栏显示图标
+- ✅ **用户可见**：你自己的屏幕上可以正常看到和使用应用
+- ✅ **快捷键切换**：使用 `Ctrl+Shift+H` 快速显示/隐藏窗口
+
+### 启用方法
+
+窗口隐藏功能需要安装 `ffi-napi` 和 `ref-napi` 依赖包。这些包是可选依赖，需要手动安装：
+
+```bash
+# 在 Windows 上安装依赖
+npm install ffi-napi ref-napi
+
+# 重新编译 Electron 代码
+npm run build:electron
+
+# 重新运行应用
+npm run electron:dev
+```
+
+安装成功后，启动应用时会在控制台看到：
+```
+✓ Window display affinity set successfully - window will be hidden during screen sharing
+✓ Window style updated to hide from taskbar
+```
+
+### 系统要求
+- Windows 10 2004 或更高版本（支持 `SetWindowDisplayAffinity` API）
+- 如果依赖包不可用，应用仍可正常运行，只是窗口隐藏功能会被禁用
+
 ## 注意事项
 
 - 需要Windows 10 2004或更高版本以支持窗口隐藏功能
 - 需要有效的Google Gemini API密钥（可在 [Google AI Studio](https://makersuite.google.com/app/apikey) 获取）
 - API密钥会加密存储在本地
-- **窗口隐藏功能（可选）**：`ffi-napi` 和 `ref-napi` 是可选依赖。在 Linux/WSL 开发时可能无法编译，但不影响其他功能。在 Windows 上可手动安装这些包以启用窗口隐藏功能。
 
