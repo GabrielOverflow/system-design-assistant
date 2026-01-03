@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, ipcMain } from 'electron';
+import { BrowserWindow, screen, ipcMain, desktopCapturer } from 'electron';
 import * as path from 'path';
 
 let selectorWindow: BrowserWindow | null = null;
@@ -110,29 +110,59 @@ function createSelectorWindow(): Promise<SelectionArea> {
  * 截取指定区域
  */
 async function captureArea(area: SelectionArea): Promise<string> {
-  const displays = screen.getAllDisplays();
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { x: screenX, y: screenY } = primaryDisplay.bounds;
-
-  // 调整坐标（考虑屏幕偏移）
-  const adjustedX = area.x + screenX;
-  const adjustedY = area.y + screenY;
-
   try {
-    // 使用 nativeImage 截取屏幕区域
-    const image = screen.captureDisplay(primaryDisplay.id, {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { x: screenX, y: screenY } = primaryDisplay.bounds;
+
+    // 调整坐标（考虑屏幕偏移）
+    const adjustedX = area.x + screenX;
+    const adjustedY = area.y + screenY;
+
+    // 使用 desktopCapturer 获取全屏截图
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { 
+        width: primaryDisplay.size.width, 
+        height: primaryDisplay.size.height 
+      }
+    });
+
+    if (sources.length === 0) {
+      throw new Error('No screen sources available');
+    }
+
+    // 找到主屏幕
+    let primarySource = sources.find(source => 
+      source.name === 'Entire Screen' || 
+      source.name === 'Screen 1' ||
+      source.name.includes('Entire')
+    );
+    
+    if (!primarySource) {
+      primarySource = sources[0];
+    }
+
+    const fullScreenImage = primarySource.thumbnail;
+    
+    if (!fullScreenImage) {
+      throw new Error('Failed to capture screen');
+    }
+
+    // 裁剪到指定区域
+    // 注意：thumbnail 的坐标是相对于屏幕的
+    const croppedImage = fullScreenImage.crop({
       x: adjustedX,
       y: adjustedY,
       width: area.width,
       height: area.height,
     });
 
-    if (!image) {
-      throw new Error('Failed to capture area');
+    if (!croppedImage) {
+      throw new Error('Failed to crop image');
     }
 
     // 转换为 base64
-    const base64 = image.toPNG().toString('base64');
+    const base64 = croppedImage.toPNG().toString('base64');
     return base64;
   } catch (error: any) {
     console.error('Area capture error:', error);
