@@ -5,7 +5,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build:electron": "tsc --project tsconfig.electron.json",
+    "build:electron": "tsc --project tsconfig.electron.json && node -e \"const fs = require('fs'); const path = require('path'); if (!fs.existsSync('dist-electron')) fs.mkdirSync('dist-electron', { recursive: true }); fs.copyFileSync(path.join('electron', 'screenshot-selector.html'), path.join('dist-electron', 'screenshot-selector.html'));\"",
     "build:renderer": "vite build",
     "build": "npm run build:electron && npm run build:renderer",
     "preview": "vite preview",
