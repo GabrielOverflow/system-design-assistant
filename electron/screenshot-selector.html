@@ -61,6 +61,50 @@
     let startY = 0;
     let currentX = 0;
     let currentY = 0;
+    let hasMoved = false; // 跟踪是否真的拖拽了
+    let clickTimeout = null; // 用于检测是否只是点击
+
+    // 检查 electronAPI 是否可用（不立即取消，只返回状态）
+    function checkElectronAPI() {
+      if (!window.electronAPI) {
+        console.error('window.electronAPI is not available');
+        return false;
+      }
+      if (!window.electronAPI.sendScreenshotAreaSelected || !window.electronAPI.sendScreenshotAreaCancelled) {
+        console.error('electronAPI methods not available:', window.electronAPI);
+        return false;
+      }
+      return true;
+    }
+    
+    // 检查并显示错误（如果 electronAPI 不可用）
+    function checkAndShowError() {
+      if (!checkElectronAPI()) {
+        instructions.textContent = '错误：无法连接到 Electron API。请按 ESC 取消。';
+        instructions.style.background = 'rgba(255, 0, 0, 0.8)';
+        instructions.classList.remove('hidden');
+        return false;
+      }
+      return true;
+    }
+
+    // 页面加载时检查（但不立即取消，只是警告）
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('Screenshot selector loaded');
+      console.log('electronAPI available:', !!window.electronAPI);
+      if (window.electronAPI) {
+        console.log('electronAPI methods:', Object.keys(window.electronAPI));
+      }
+      // 等待一下，可能 preload 还没加载完
+      setTimeout(() => {
+        if (!checkElectronAPI()) {
+          console.error('ERROR: electronAPI not available after delay');
+          checkAndShowError();
+        } else {
+          console.log('electronAPI is available and ready');
+        }
+      }, 500);
+    });
 
     function updateSelectionBox(x, y, width, height) {
       selectionBox.style.left = x + 'px';
@@ -81,7 +125,20 @@
     document.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return; // 只处理左键
       
+      // 检查 electronAPI，如果不可用则显示错误但不阻止操作
+      if (!checkElectronAPI()) {
+        checkAndShowError();
+        return;
+      }
+      
+      // 清除之前的超时
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
+      
       isSelecting = true;
+      hasMoved = false;
       startX = e.clientX;
       startY = e.clientY;
       currentX = startX;
@@ -93,8 +150,16 @@
     document.addEventListener('mousemove', (e) => {
       if (!isSelecting) return;
       
+      const prevX = currentX;
+      const prevY = currentY;
       currentX = e.clientX;
       currentY = e.clientY;
+      
+      // 检查是否真的移动了
+      if (Math.abs(currentX - prevX) > 2 || Math.abs(currentY - prevY) > 2) {
+        hasMoved = true;
+      }
+      
       const area = getSelectionArea();
       updateSelectionBox(area.x, area.y, area.width, area.height);
     });
@@ -102,21 +167,49 @@
     document.addEventListener('mouseup', (e) => {
       if (!isSelecting || e.button !== 0) return;
       
+      // 清除点击超时
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+        clickTimeout = null;
+      }
+      
       isSelecting = false;
       const area = getSelectionArea();
       
-      // 确保选择区域有效（至少 10x10 像素）
-      if (area.width >= 10 && area.height >= 10) {
+      // 降低最小区域要求（从10x10改为5x5），或者如果用户真的拖拽了，允许更小的区域
+      const minSize = hasMoved ? 3 : 5;
+      
+      if (area.width >= minSize && area.height >= minSize) {
         // 通过 electronAPI 发送选择结果
+        console.log('Sending selected area:', area);
         if (window.electronAPI && window.electronAPI.sendScreenshotAreaSelected) {
           window.electronAPI.sendScreenshotAreaSelected(area);
         } else {
           console.error('electronAPI.sendScreenshotAreaSelected not available');
+          if (window.electronAPI && window.electronAPI.sendScreenshotAreaCancelled) {
+            window.electronAPI.sendScreenshotAreaCancelled();
+          }
         }
       } else {
-        // 如果区域太小，取消选择
-        if (window.electronAPI && window.electronAPI.sendScreenshotAreaCancelled) {
-          window.electronAPI.sendScreenshotAreaCancelled();
+        // 如果区域太小
+        console.log('Selection area too small:', area, 'hasMoved:', hasMoved);
+        if (hasMoved) {
+          // 如果用户真的拖拽了，即使很小也接受
+          if (window.electronAPI && window.electronAPI.sendScreenshotAreaSelected) {
+            window.electronAPI.sendScreenshotAreaSelected(area);
+          }
+        } else {
+          // 如果只是点击没有拖拽，提示用户并等待
+          instructions.textContent = '请拖拽选择区域（3秒后自动取消）';
+          instructions.classList.remove('hidden');
+          
+          // 3秒后如果没有操作，自动取消
+          clickTimeout = setTimeout(() => {
+            console.log('Auto-cancelling due to no drag');
+            if (window.electronAPI && window.electronAPI.sendScreenshotAreaCancelled) {
+              window.electronAPI.sendScreenshotAreaCancelled();
+            }
+          }, 3000);
         }
       }
     });
@@ -124,6 +217,7 @@
     // ESC 键取消
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        console.log('ESC pressed, cancelling selection');
         if (window.electronAPI && window.electronAPI.sendScreenshotAreaCancelled) {
           window.electronAPI.sendScreenshotAreaCancelled();
         }

@@ -110,6 +110,31 @@ function createSelectorWindow(): Promise<SelectionArea> {
     const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
     const { x: screenX, y: screenY } = primaryDisplay.bounds;
 
+    // 检查 preload 文件是否存在
+    const preloadPath = path.join(__dirname, 'preload.js');
+    const htmlPath = path.join(__dirname, 'screenshot-selector.html');
+    const fs = require('fs');
+    
+    console.log('Creating selector window...');
+    console.log('Preload path:', preloadPath);
+    console.log('Preload exists:', fs.existsSync(preloadPath));
+    console.log('HTML path:', htmlPath);
+    console.log('HTML exists:', fs.existsSync(htmlPath));
+    
+    if (!fs.existsSync(preloadPath)) {
+      console.error('Preload script not found at:', preloadPath);
+      cleanupSelector();
+      reject(new Error('Preload script not found'));
+      return;
+    }
+    
+    if (!fs.existsSync(htmlPath)) {
+      console.error('HTML file not found at:', htmlPath);
+      cleanupSelector();
+      reject(new Error('Selector HTML file not found'));
+      return;
+    }
+
     // 创建全屏透明窗口用于选择区域
     selectorWindow = new BrowserWindow({
       width: screenWidth,
@@ -127,12 +152,17 @@ function createSelectorWindow(): Promise<SelectionArea> {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
-        preload: path.join(__dirname, 'preload.js'),
+        preload: preloadPath,
       },
     });
 
     // 加载选择器 HTML
-    selectorWindow.loadFile(path.join(__dirname, 'screenshot-selector.html'));
+    console.log('Loading selector HTML...');
+    selectorWindow.loadFile(htmlPath).catch((error) => {
+      console.error('Failed to load selector HTML:', error);
+      cleanupSelector();
+      reject(new Error(`Failed to load selector window: ${error.message}`));
+    });
 
     // 设置超时，防止窗口一直卡住（30秒后自动取消）
     selectionTimeout = setTimeout(() => {
@@ -141,12 +171,47 @@ function createSelectorWindow(): Promise<SelectionArea> {
     }, 30000);
 
     selectorWindow.once('ready-to-show', () => {
+      console.log('Selector window ready to show');
       if (selectorWindow && !selectorWindow.isDestroyed()) {
         // 确保窗口可以接收鼠标事件
         selectorWindow.setIgnoreMouseEvents(false, { forward: false });
         selectorWindow.show();
         selectorWindow.focus();
-        console.log('Selector window shown');
+        console.log('Selector window shown and focused');
+        
+        // 等待一小段时间后检查 electronAPI
+        setTimeout(() => {
+          if (selectorWindow && !selectorWindow.isDestroyed()) {
+            selectorWindow.webContents.executeJavaScript(`
+              console.log('Checking electronAPI in selector window:', typeof window.electronAPI);
+              if (window.electronAPI) {
+                console.log('electronAPI methods:', Object.keys(window.electronAPI));
+                console.log('sendScreenshotAreaSelected:', typeof window.electronAPI.sendScreenshotAreaSelected);
+                console.log('sendScreenshotAreaCancelled:', typeof window.electronAPI.sendScreenshotAreaCancelled);
+              } else {
+                console.error('ERROR: electronAPI is not available in selector window!');
+                alert('错误：无法连接到 Electron API。请检查控制台日志。');
+              }
+            `).catch(err => console.error('Failed to check electronAPI:', err));
+          }
+        }, 500);
+      }
+    });
+    
+    // 监听页面加载完成
+    selectorWindow.webContents.once('did-finish-load', () => {
+      console.log('Selector window HTML loaded successfully');
+      if (selectorWindow && !selectorWindow.isDestroyed()) {
+        // 再次检查 electronAPI
+        selectorWindow.webContents.executeJavaScript(`
+          console.log('Page loaded, checking electronAPI...');
+          if (!window.electronAPI) {
+            console.error('ERROR: electronAPI not available after page load!');
+            alert('错误：无法连接到 Electron API。请重新启动应用。');
+          } else {
+            console.log('electronAPI is available:', Object.keys(window.electronAPI));
+          }
+        `).catch(err => console.error('Failed to check electronAPI after load:', err));
       }
     });
 
@@ -167,9 +232,15 @@ function createSelectorWindow(): Promise<SelectionArea> {
     });
 
     // 处理窗口加载错误
-    selectorWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
-      console.error('Failed to load selector window:', errorCode, errorDescription);
+    selectorWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      console.error('Failed to load selector window:', errorCode, errorDescription, validatedURL);
       cleanupSelector();
+      reject(new Error(`Failed to load selector window: ${errorDescription}`));
+    });
+    
+    // 处理控制台消息（用于调试）
+    selectorWindow.webContents.on('console-message', (_event, level, message) => {
+      console.log(`[Selector Window Console ${level}]:`, message);
     });
   });
 }
