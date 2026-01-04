@@ -63,16 +63,20 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173').catch((error) => {
       console.error('Failed to load URL:', error);
     });
-    // 使用底部模式打开 DevTools，而不是独立窗口
-    // 'bottom' 模式会在主窗口底部显示 DevTools，不会创建独立窗口
-    // 如果需要独立窗口，可以改为 'detach'，但会创建新窗口
-    mainWindow.webContents.openDevTools({ mode: 'bottom' });
+    
+    // 禁用自动打开 DevTools，用户可以通过 F12 手动打开
+    // 这样可以避免创建额外的窗口
+    // mainWindow.webContents.openDevTools({ mode: 'bottom' });
     
     // 开发模式下，页面加载完成后显示窗口
+    let hasShown = false; // 防止重复显示
     mainWindow.webContents.once('did-finish-load', () => {
+      if (hasShown) return; // 如果已经显示过，不再重复显示
+      hasShown = true;
+      
       console.log('Page loaded successfully');
       // 检查 preload 是否成功注入
-      if (mainWindow) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.executeJavaScript(`
           console.log('Checking electronAPI:', typeof window.electronAPI);
           console.log('electronAPI methods:', window.electronAPI ? Object.keys(window.electronAPI) : 'undefined');
@@ -85,6 +89,7 @@ function createWindow() {
       }
     });
     
+    // 防止Vite HMR重新连接时重复触发显示
     mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
       console.error('Failed to load page:', errorCode, errorDescription);
     });
@@ -94,6 +99,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    isWindowVisible = false;
   });
 
   // 窗口关闭时隐藏而不是退出
@@ -105,6 +111,18 @@ function createWindow() {
       isWindowVisible = false;
     }
   });
+
+  // 防止DevTools关闭时自动重新打开（仅在开发模式）
+  if (isDev) {
+    mainWindow.webContents.on('devtools-opened', () => {
+      console.log('DevTools opened');
+    });
+    
+    mainWindow.webContents.on('devtools-closed', () => {
+      console.log('DevTools closed');
+      // 不自动重新打开DevTools
+    });
+  }
 }
 
 function createTray() {
