@@ -24,6 +24,14 @@ declare global {
 app.isQuiting = false;
 
 function createWindow() {
+  // 如果窗口已存在，直接显示并返回
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+    isWindowVisible = true;
+    return;
+  }
+
   const isDev = process.env.NODE_ENV === 'development';
   
   const preloadPath = path.join(__dirname, 'preload.js');
@@ -55,7 +63,10 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173').catch((error) => {
       console.error('Failed to load URL:', error);
     });
-    mainWindow.webContents.openDevTools();
+    // 使用底部模式打开 DevTools，而不是独立窗口
+    // 'bottom' 模式会在主窗口底部显示 DevTools，不会创建独立窗口
+    // 如果需要独立窗口，可以改为 'detach'，但会创建新窗口
+    mainWindow.webContents.openDevTools({ mode: 'bottom' });
     
     // 开发模式下，页面加载完成后显示窗口
     mainWindow.webContents.once('did-finish-load', () => {
@@ -212,6 +223,7 @@ ipcMain.handle('get-all-store', () => {
 setupScreenshot(ipcMain);
 initializeScreenshotSelector();
 
+// 使用 whenReady() 而不是 on('ready')，避免重复执行
 app.whenReady().then(() => {
   console.log('Electron app is ready');
   createWindow();
@@ -219,15 +231,12 @@ app.whenReady().then(() => {
   registerShortcuts();
   console.log('Window, tray, and shortcuts initialized');
 
+  // macOS 特有的 activate 事件（Windows 上不会触发）
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
-});
-
-app.on('ready', () => {
-  console.log('Electron app ready event fired');
 });
 
 app.on('window-all-closed', () => {
