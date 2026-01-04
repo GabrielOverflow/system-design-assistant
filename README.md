@@ -73,18 +73,29 @@ npm install ffi-napi ref-napi
 
 ### 启用方法
 
-窗口隐藏功能需要安装 `ffi-napi` 和 `ref-napi` 依赖包。这些包是可选依赖，需要手动安装：
+窗口隐藏功能需要安装 `ffi-napi` 和 `ref-napi` 依赖包。这些包是原生模块，需要为 Electron 重新编译：
 
 ```bash
-# 在 Windows 上安装依赖
+# 1. 在 Windows 上安装依赖
 npm install ffi-napi ref-napi
 
-# 重新编译 Electron 代码
+# 2. 安装 electron-rebuild（如果还没有）
+npm install --save-dev electron-rebuild
+
+# 3. 重新编译原生模块（为 Electron 的 Node.js 版本）
+npm run rebuild
+
+# 4. 重新编译 Electron 代码
 npm run build:electron
 
-# 重新运行应用
+# 5. 重新运行应用
 npm run electron:dev
 ```
+
+**重要提示**：
+- `ffi-napi` 和 `ref-napi` 是原生模块，必须使用 `electron-rebuild` 为 Electron 的 Node.js 版本重新编译
+- 如果看到 "Cannot find module 'ffi-napi'" 错误，说明需要执行 `npm run rebuild`
+- 重新编译可能需要几分钟时间，请耐心等待
 
 安装成功后，启动应用时会在控制台看到：
 ```

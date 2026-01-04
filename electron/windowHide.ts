@@ -1,4 +1,5 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
+import * as path from 'path';
 
 // Windows API常量
 const WDA_EXCLUDEFROMCAPTURE = 0x00000011;
@@ -14,8 +15,17 @@ function loadWindowsAPI() {
   }
 
   try {
-    // 动态加载，如果包不存在会抛出错误
-    const ffi = require('ffi-napi');
+    // 尝试从应用路径加载模块（支持打包后的应用）
+    let ffi;
+    try {
+      // 首先尝试从当前工作目录加载（开发模式）
+      ffi = require('ffi-napi');
+    } catch (err) {
+      // 如果失败，尝试从应用路径加载（打包后）
+      const appPath = app.getAppPath();
+      const modulePath = path.join(appPath, 'node_modules', 'ffi-napi');
+      ffi = require(modulePath);
+    }
     
     // 定义Windows API
     const user32 = ffi.Library('user32', {
