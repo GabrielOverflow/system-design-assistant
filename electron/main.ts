@@ -49,7 +49,7 @@ function createWindow() {
       contextIsolation: true,
     },
     show: isDev, // 开发模式下显示，生产模式隐藏
-    skipTaskbar: !isDev, // 开发模式下在任务栏显示
+    skipTaskbar: true, // 始终隐藏任务栏图标（通过Windows API实现）
   });
 
   // 设置窗口隐藏（屏幕共享时不可见）

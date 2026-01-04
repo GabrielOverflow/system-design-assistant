@@ -49,6 +49,22 @@ npm run electron:build
 
 ## 窗口隐藏功能（屏幕共享时隐藏）
 
+### 安装依赖（必需）
+
+窗口隐藏功能需要安装以下可选依赖：
+
+```bash
+npm install ffi-napi ref-napi
+```
+
+**注意**：
+- 这些依赖需要在 **Windows 系统** 上安装
+- 如果是在 WSL 中开发，需要在 Windows 上运行 `npm install` 来安装这些依赖
+- 安装后重新构建 Electron 主进程：`npm run build:electron`
+- 安装成功后，运行应用时终端会显示：`✓ Window display affinity set successfully`
+
+### 功能说明
+
 ### 功能说明
 - ✅ **屏幕共享隐藏**：在 Zoom、Teams、OBS 等软件进行屏幕共享时，应用窗口会自动隐藏
 - ✅ **任务栏隐藏**：应用不会在任务栏显示图标
